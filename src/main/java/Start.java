@@ -22,7 +22,8 @@ public class Start extends Application {
         stageBuilder.addLogTextArea();
         stageBuilder.addDirectoryToEncryptLabel().addDirectoryToEncrypt().addCopyDirectoryLabel().addCopyDirectoryField();
         stageBuilder.addPopUpEncrypt()
-                .addRadioButtonEncryptDecrypt().addGoButton().addDEcryptPopUp().finalyseAndShow();
+                .addRadioButtonEncryptDecrypt().addGoButton().addDEcryptPopUp().addFileChooser().finalyseAndShow();
+
 
 
 

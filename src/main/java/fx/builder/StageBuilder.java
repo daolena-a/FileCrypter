@@ -1,21 +1,27 @@
 package fx.builder;
 
 import file.crypter.FileCrypter;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
+import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
+import javafx.stage.FileChooser;
 import javafx.stage.Modality;
 import javafx.stage.Popup;
 import javafx.stage.Stage;
+import model.FileFX;
 
 import java.io.File;
 import java.util.Arrays;
+import java.util.List;
 
 /**
  * Created with IntelliJ IDEA.
@@ -26,7 +32,7 @@ import java.util.Arrays;
  */
 public final class StageBuilder {
 
-    private final Stage  stage;
+    private final Stage stage;
     private GridPane grid;
     private TextArea logs;
     private TextField directoryToEncrypt;
@@ -36,8 +42,8 @@ public final class StageBuilder {
     private PasswordField passwordField;
     private RadioButton encrypt;
     private RadioButton decrypt;
+    TableView<FileFX> table = new TableView<FileFX>();
     /**
-     *
      * @param stage
      */
     public StageBuilder(Stage stage) {
@@ -48,10 +54,9 @@ public final class StageBuilder {
     }
 
     /**
-     *
      * @return
      */
-    private StageBuilder addGridPane(){
+    private StageBuilder addGridPane() {
         GridPane grid = new GridPane();
         grid.setAlignment(Pos.CENTER);
         grid.setHgap(10);
@@ -62,10 +67,9 @@ public final class StageBuilder {
     }
 
     /**
-     *
      * @return
      */
-    public StageBuilder addLogTextArea(){
+    public StageBuilder addLogTextArea() {
         TextArea logs = new TextArea();
         logs.setScrollTop(60);
         logs.setPrefRowCount(1000);
@@ -75,27 +79,38 @@ public final class StageBuilder {
     }
 
 
-    public StageBuilder addDirectoryToEncryptLabel(){
+    public StageBuilder addDirectoryToEncryptLabel() {
         Label userName = new Label("Files to encrypt directory:");
         grid.add(userName, 0, 1);
         return this;
     }
 
-    public StageBuilder addDirectoryToEncrypt(){
-        final TextField directory = new TextField();
-//        directory.setMaxWidth(200);
-        grid.add(directory, 1, 1);
-        directoryToEncrypt = directory;
+    public StageBuilder addDirectoryToEncrypt() {
+
+        TableColumn<FileFX,String> fileName = new TableColumn<>();
+        TableColumn<FileFX,String> processed = new TableColumn<>();
+        fileName.setText("Files");
+        processed.setText("isProcessed");
+        fileName.setCellValueFactory(
+                new PropertyValueFactory<FileFX, String>("fileName")
+        );
+        processed.setCellValueFactory(
+                new PropertyValueFactory<FileFX, String>("isProcessed")
+
+        );
+        table.getColumns().add(fileName);
+        table.getColumns().add(processed);
+        grid.add(table,1,1);
         return this;
     }
 
-    public StageBuilder addCopyDirectoryLabel(){
+    public StageBuilder addCopyDirectoryLabel() {
         Label userName = new Label("Copy File to:");
         grid.add(userName, 0, 2);
         return this;
     }
 
-    public StageBuilder addCopyDirectoryField(){
+    public StageBuilder addCopyDirectoryField() {
         final TextField copyDirectoy = new TextField();
 //        directory.setMaxWidth(200);
         grid.add(copyDirectoy, 1, 2);
@@ -103,7 +118,30 @@ public final class StageBuilder {
         return this;
     }
 
-    public StageBuilder addRadioButtonEncryptDecrypt(){
+    public StageBuilder addFileChooser(){
+        FileChooser fileChooser = new FileChooser();
+        fileChooser.setTitle("Open Resource File");
+        Button valid = new Button();
+        valid.setText("Choose file");
+        valid.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent actionEvent) {
+                List<File> files = fileChooser.showOpenMultipleDialog(stage);
+                ObservableList<FileFX> list = FXCollections.observableArrayList();
+
+                        files.forEach((file) -> {
+                            FileFX fileFX = new FileFX(file);
+                            list.add(fileFX);
+
+                        });
+                table.setItems(list);
+            }
+        });
+        grid.add(valid,3,1);
+        return this;
+    }
+
+    public StageBuilder addRadioButtonEncryptDecrypt() {
         final ToggleGroup group = new ToggleGroup();
 
         RadioButton rb1 = new RadioButton("Decrypt");
@@ -118,12 +156,12 @@ public final class StageBuilder {
         encrypt = rb2;
 
         VBox vbox = new VBox(8);
-        vbox.getChildren().addAll(rb1,rb2);
+        vbox.getChildren().addAll(rb1, rb2);
         grid.add(vbox, 2, 1);
         return this;
     }
 
-    public StageBuilder addPopUpEncrypt(){
+    public StageBuilder addPopUpEncrypt() {
         final Stage popup = new Stage();
         popup.initModality(Modality.WINDOW_MODAL);
         final PasswordField field = new PasswordField();
@@ -137,41 +175,39 @@ public final class StageBuilder {
         valid.setOnAction(new EventHandler<ActionEvent>() {
             @Override
             public void handle(ActionEvent actionEvent) {
-//                System.out.println("go");
-                String directoy = directoryToEncrypt.getText();
-                File direc = new File(directoy);
                 File writing = new File(copyDirectory.getText());
                 try {
                     writing.mkdirs();
                 } catch (Exception e) {
                     e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
                 }
-                if(direc.isDirectory()){
-                    logs.appendText("répertoire d'écriture " +writing.getAbsolutePath());
-                    Arrays.asList(direc.listFiles()).forEach((file)
-                            -> {
-                        try{
-                            FileCrypter.writeData(file, writing, field.getText());
-                            logs.appendText(file.getName() + "OK\n");
-                        }catch (Exception e){
-                            logs.appendText(file.getName() + "ERROR\n");
-                            logs.appendText("échec de l'écriture "+file.getName());
+
+
+                table.getItems().forEach(
+                        (file) -> {
+
+                                try {
+                                    FileCrypter.writeData(file.getFile(), writing, field.getText());
+                                    logs.appendText(file.getFile().getName() + "OK\n");
+                                } catch (Exception e) {
+                                    e.printStackTrace();
+                                    logs.appendText(file.getFile().getName() + "ERROR\n");
+                                    logs.appendText("échec de l'écriture " +file.getFile().getName());
+                                }
                         }
 
-                    }
+                );
 
-                    );
-                }
                 logs.appendText(" encrypting ok \n");
                 popup.close();
 
             }
         });
         HBox hbox = new HBox(10);
-        hbox.setPadding(new Insets(25,25,25,25));
+        hbox.setPadding(new Insets(25, 25, 25, 25));
 
         Label label = new Label("Password: ");
-        hbox.getChildren().addAll(label,field,valid);
+        hbox.getChildren().addAll(label, field, valid);
         Scene scene = new Scene(hbox);
 
         popup.setScene(scene);
@@ -179,41 +215,39 @@ public final class StageBuilder {
         return this;
     }
 
-    public StageBuilder addGoButton(){
+    public StageBuilder addGoButton() {
         Button go = new Button();
         go.setText("Go");
         go.setDefaultButton(true);
         go.setOnAction(new EventHandler<ActionEvent>() {
             @Override
             public void handle(ActionEvent actionEvent) {
-                if(encrypt.isSelected()){
+                if (encrypt.isSelected()) {
                     popEncrypt.show();
-                }
-                else if(decrypt.isSelected()){
+                } else if (decrypt.isSelected()) {
                     decryptPopUp.show();
                 }
 
             }
         });
-        grid.add(go, 3, 1);
+        grid.add(go, 6, 1);
         return this;
     }
 
 
-    public StageBuilder addDEcryptPopUp(){
+    public StageBuilder addDEcryptPopUp() {
 //        final Popup popup = new Popup(); popup.setX(300); popup.setY(200);
 
         final Stage popup = new Stage();
         popup.initModality(Modality.WINDOW_MODAL);
 
 
-
         HBox box = new HBox(10);
-        box.setPadding(new Insets(25,25,25,25));
+        box.setPadding(new Insets(25, 25, 25, 25));
 
         final PasswordField field = new PasswordField();
 
-        decryptPopUp  = popup;
+        decryptPopUp = popup;
         Button valid = new Button();
         valid.setText("Start");
         valid.setDefaultButton(false);
@@ -222,38 +256,35 @@ public final class StageBuilder {
         valid.setOnAction(new EventHandler<ActionEvent>() {
             @Override
             public void handle(ActionEvent actionEvent) {
-                System.out.println("go");
-                String directoy = directoryToEncrypt.getText();
-                File direc = new File(directoy);
+
                 File writing = new File(copyDirectory.getText());
                 try {
                     writing.mkdirs();
                 } catch (Exception e) {
-                    e.printStackTrace();
+                    e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
                 }
-                if (direc.isDirectory()) {
-                    logs.appendText("répertoire d'écriture " + writing.getAbsolutePath()+"\n");
-                    Arrays.asList(direc.listFiles()).forEach((file)
-                            -> {
-                        try{
-                            FileCrypter.writeDataUncrypt(file, writing, field.getText());
-                        }catch (Exception e){
-                            logs.appendText("échec de l'écriture "+file.getName());
+
+
+                table.getItems().forEach(
+                        (file) -> {
+                            try {
+                                FileCrypter.writeDataUncrypt(file.getFile(), writing, field.getText());
+                                logs.appendText(file.getFile().getName() + "OK\n");
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                                logs.appendText(file.getFile().getName() + "ERROR\n");
+                                logs.appendText("échec de l'écriture " +file.getFile().getName());
+                            }
                         }
+                );
+                logs.appendText(" decrypting ok \n");
+                popup.close();
 
-
-
-                    }
-
-                    );
-                }
-                logs.appendText("decrypt ok \n");
-                decryptPopUp.close();
             }
         });
 
         Label label = new Label("Password");
-        box.getChildren().addAll(label,field, valid);
+        box.getChildren().addAll(label, field, valid);
 
 
         Scene scene = new Scene(box);
@@ -264,7 +295,7 @@ public final class StageBuilder {
 
     }
 
-    public StageBuilder addDecryptButton(){
+    public StageBuilder addDecryptButton() {
         Button decrypt = new Button();
         decrypt.setText("Decrypt");
         decrypt.setDefaultButton(true);
@@ -278,7 +309,7 @@ public final class StageBuilder {
         return this;
     }
 
-    public void finalyseAndShow(){
+    public void finalyseAndShow() {
         Scene scene = new Scene(grid, 700, 275);
         stage.setScene(scene);
         stage.show();
