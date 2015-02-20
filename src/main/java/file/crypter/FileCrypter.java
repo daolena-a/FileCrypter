@@ -29,7 +29,7 @@ public class FileCrypter {
             writingDir.mkdirs();
         }
         if (f.getFile().isDirectory()) {
-
+            f.setIsProcessed(Boolean.TRUE);
 //            for(File childFile : f.listFiles()){
 //                writeData(childFile,new File(writingDir.getAbsolutePath()+File.separator+f.getName()),pass);
 //            }
@@ -73,7 +73,7 @@ public class FileCrypter {
             writingDir.mkdirs();
         }
         if (f.getFile().isDirectory()) {
-
+            f.setIsProcessed(Boolean.TRUE);
 
         } else {
             if(Boolean.TRUE.equals(f.getIsProcessed())){

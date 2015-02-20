@@ -48,8 +48,8 @@ public final class StageBuilder {
      */
     public StageBuilder(Stage stage) {
         this.stage = stage;
-        this.stage.setTitle("FicleCrypter");
-        stage.setWidth(900);
+        this.stage.setTitle("FileCrypter");
+        stage.setWidth(1200);
         addGridPane();
     }
 
@@ -131,6 +131,7 @@ public final class StageBuilder {
             @Override
             public void handle(ActionEvent actionEvent) {
                 List<File> files = fileChooser.showOpenMultipleDialog(stage);
+                if(files == null || files.size()<1) return;
                 ObservableList<FileFX> list = FXCollections.observableArrayList();
 
                         files.forEach((file) -> {
