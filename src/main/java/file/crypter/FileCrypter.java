@@ -34,6 +34,9 @@ public class FileCrypter {
 //                writeData(childFile,new File(writingDir.getAbsolutePath()+File.separator+f.getName()),pass);
 //            }
         } else {
+            if(Boolean.TRUE.equals(f.getIsProcessed())){
+                return;
+            }
             Path path = f.getFile().toPath();
             try {
 
@@ -73,6 +76,9 @@ public class FileCrypter {
 
 
         } else {
+            if(Boolean.TRUE.equals(f.getIsProcessed())){
+                return;
+            }
             Path path = f.getFile().toPath();
             try {
 

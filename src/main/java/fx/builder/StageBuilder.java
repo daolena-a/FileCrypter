@@ -141,7 +141,7 @@ public final class StageBuilder {
                 table.setItems(list);
             }
         });
-        grid.add(valid,3,1);
+        grid.add(valid,2,1);
         return this;
     }
 
@@ -174,7 +174,42 @@ public final class StageBuilder {
 //                }
             }
         });
+        grid.add(valid,3,1);
+        return this;
+    }
+
+    public StageBuilder addCopyDirectoryChooser(){
+        DirectoryChooser directoryChooser = new DirectoryChooser();
+        directoryChooser.setTitle("Open Resource Directorty");
+
+        Button valid = new Button();
+        valid.setText("Choose a directory");
+        valid.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent actionEvent) {
+
+                File file = directoryChooser.showDialog(stage);
+                copyDirectory.setText(file.getAbsolutePath());
+
+
+            }
+        });
         grid.add(valid,3,2);
+        return this;
+    }
+
+    public StageBuilder addClearListButton(){
+        Button go = new Button();
+        go.setText("Clear");
+        go.setDefaultButton(true);
+        go.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent actionEvent) {
+                table.getItems().clear();
+
+            }
+        });
+        grid.add(go, 0,3);
         return this;
     }
 
@@ -275,8 +310,7 @@ public final class StageBuilder {
                             } catch (Exception e) {
                                 e.printStackTrace();
                                 file.setIsProcessed(Boolean.FALSE);
-                                // logs.appendText(file.getFile().getName() + "ERROR\n");
-                                //logs.appendText("échec de l'écriture " +file.getFile().getName());
+
                             }
                         }
 
@@ -332,7 +366,7 @@ public final class StageBuilder {
 
             }
         });
-        grid.add(go, 6, 1);
+        grid.add(go, 3,3);
         return this;
     }
 
