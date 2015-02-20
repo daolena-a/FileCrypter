@@ -3,6 +3,7 @@ package fx.builder;
 import file.crypter.FileCrypter;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.concurrent.Task;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.geometry.Insets;
@@ -13,13 +14,11 @@ import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
-import javafx.stage.FileChooser;
-import javafx.stage.Modality;
-import javafx.stage.Popup;
-import javafx.stage.Stage;
+import javafx.stage.*;
 import model.FileFX;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -43,6 +42,7 @@ public final class StageBuilder {
     private RadioButton encrypt;
     private RadioButton decrypt;
     TableView<FileFX> table = new TableView<FileFX>();
+
     /**
      * @param stage
      */
@@ -72,8 +72,8 @@ public final class StageBuilder {
     public StageBuilder addLogTextArea() {
         TextArea logs = new TextArea();
         logs.setScrollTop(60);
-        logs.setPrefRowCount(1000);
-        grid.add(logs, 1, 3);
+        logs.setPrefRowCount(100);
+       // grid.add(logs, 1, 3);
         this.logs = logs;
         return this;
     }
@@ -98,9 +98,12 @@ public final class StageBuilder {
                 new PropertyValueFactory<FileFX, String>("isProcessed")
 
         );
+
+        table.setMinSize(500,50);
         table.getColumns().add(fileName);
         table.getColumns().add(processed);
         grid.add(table,1,1);
+
         return this;
     }
 
@@ -121,6 +124,7 @@ public final class StageBuilder {
     public StageBuilder addFileChooser(){
         FileChooser fileChooser = new FileChooser();
         fileChooser.setTitle("Open Resource File");
+
         Button valid = new Button();
         valid.setText("Choose file");
         valid.setOnAction(new EventHandler<ActionEvent>() {
@@ -141,6 +145,78 @@ public final class StageBuilder {
         return this;
     }
 
+    public StageBuilder addDirectoryChooser(){
+        DirectoryChooser directoryChooser = new DirectoryChooser();
+        directoryChooser.setTitle("Open Resource Directorty");
+
+        Button valid = new Button();
+        valid.setText("Choose a directory");
+        valid.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
+            public void handle(ActionEvent actionEvent) {
+                File file = directoryChooser.showDialog(stage);
+                ObservableList<FileFX> list;
+                list = FXCollections.observableArrayList();
+                if(table.getItems()!= null && table.getItems().size() >0){
+                    list.addAll(table.getItems());
+                }
+                addFileToObservableList(file,list,null);
+                table.setItems(list);
+//                FileFX fileFX = new FileFX(file);
+//                if(table.getItems()!= null && table.getItems().size() >0){
+//                    list = table.getItems();
+//                    list.add(fileFX);
+//                }
+//                else{
+//                    list = FXCollections.observableArrayList();
+//                    list.add(fileFX);
+//                    table.setItems(list);
+//                }
+            }
+        });
+        grid.add(valid,3,2);
+        return this;
+    }
+
+    /**
+     *
+     * @param f
+     * @param list
+     */
+    private void addFileToObservableList(File f, ObservableList<FileFX> list, FileFX parent){
+        if(f.isDirectory()){
+
+            FileFX dir = new FileFX(f);
+            dir.setParent(parent);
+            list.add(dir);
+
+            for(File child : f.listFiles()){
+
+                FileFX file = new FileFX(child);
+                file.setParent(parent);
+                list.add(file);
+                if(child.isDirectory()){
+
+
+                    addFileToObservableList(child, list, dir);
+                }
+
+
+            }
+
+
+
+        }else{
+
+            FileFX file = new FileFX(f);
+            file.setParent(parent);
+            list.add(file);
+
+
+        }
+    }
+
+
     public StageBuilder addRadioButtonEncryptDecrypt() {
         final ToggleGroup group = new ToggleGroup();
 
@@ -160,7 +236,7 @@ public final class StageBuilder {
         grid.add(vbox, 2, 1);
         return this;
     }
-
+    ProgressBar bar = new ProgressBar();
     public StageBuilder addPopUpEncrypt() {
         final Stage popup = new Stage();
         popup.initModality(Modality.WINDOW_MODAL);
@@ -175,28 +251,51 @@ public final class StageBuilder {
         valid.setOnAction(new EventHandler<ActionEvent>() {
             @Override
             public void handle(ActionEvent actionEvent) {
-                File writing = new File(copyDirectory.getText());
-                try {
-                    writing.mkdirs();
-                } catch (Exception e) {
-                    e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
-                }
 
+                Task task = new Task<Void>() {
 
-                table.getItems().forEach(
-                        (file) -> {
-
-                                try {
-                                    FileCrypter.writeData(file.getFile(), writing, field.getText());
-                                    logs.appendText(file.getFile().getName() + "OK\n");
-                                } catch (Exception e) {
-                                    e.printStackTrace();
-                                    logs.appendText(file.getFile().getName() + "ERROR\n");
-                                    logs.appendText("échec de l'écriture " +file.getFile().getName());
-                                }
+                    @Override public Void call() {
+                        updateProgress(0,0);
+                        File writing = new File(copyDirectory.getText());
+                        try {
+                            writing.mkdirs();
+                        } catch (Exception e) {
+                            e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
                         }
 
-                );
+                        long length = table.getItems().size();
+                        int count = 0;
+                        for(FileFX file : table.getItems()){
+                            count++;
+                            try {
+                                FileCrypter.writeData(file, writing, field.getText());
+                                updateProgress(count,length);
+                                // logs.appendText(file.getFile().getName() + "OK\n");
+                                file.setIsProcessed(Boolean.TRUE);
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                                file.setIsProcessed(Boolean.FALSE);
+                                // logs.appendText(file.getFile().getName() + "ERROR\n");
+                                //logs.appendText("échec de l'écriture " +file.getFile().getName());
+                            }
+                        }
+
+                        return null;
+                    }
+
+
+                    @Override
+                    protected void succeeded() {
+                        super.succeeded();
+
+                    }
+                };
+
+                bar.setVisible(true);
+                bar.progressProperty().bind(task.progressProperty());
+                grid.add(bar,1,3);
+                new Thread(task).start();
+
 
                 logs.appendText(" encrypting ok \n");
                 popup.close();
@@ -222,6 +321,9 @@ public final class StageBuilder {
         go.setOnAction(new EventHandler<ActionEvent>() {
             @Override
             public void handle(ActionEvent actionEvent) {
+                if(copyDirectory.getText() == null || copyDirectory.getText().length()<1){
+                    return;
+                }
                 if (encrypt.isSelected()) {
                     popEncrypt.show();
                 } else if (decrypt.isSelected()) {
@@ -256,29 +358,46 @@ public final class StageBuilder {
         valid.setOnAction(new EventHandler<ActionEvent>() {
             @Override
             public void handle(ActionEvent actionEvent) {
+                Task task = new Task<Void>() {
 
-                File writing = new File(copyDirectory.getText());
-                try {
-                    writing.mkdirs();
-                } catch (Exception e) {
-                    e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
-                }
+                    @Override
+                    public Void call() {
+                        updateProgress(0, 0);
+                        File writing = new File(copyDirectory.getText());
+                        try {
+                            writing.mkdirs();
+                        } catch (Exception e) {
+                            e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
+                        }
 
 
-                table.getItems().forEach(
-                        (file) -> {
+                        long length = table.getItems().size();
+                        int count = 0;
+                        for (FileFX file : table.getItems()) {
                             try {
-                                FileCrypter.writeDataUncrypt(file.getFile(), writing, field.getText());
-                                logs.appendText(file.getFile().getName() + "OK\n");
+
+                                FileCrypter.writeDataUncrypt(file, writing, field.getText());
+                                count++;
+                                updateProgress(count,length);
+                                file.setIsProcessed(Boolean.TRUE);
                             } catch (Exception e) {
                                 e.printStackTrace();
-                                logs.appendText(file.getFile().getName() + "ERROR\n");
-                                logs.appendText("échec de l'écriture " +file.getFile().getName());
+                                file.setIsProcessed(Boolean.FALSE);
+
+
                             }
                         }
-                );
-                logs.appendText(" decrypting ok \n");
-                popup.close();
+
+
+                        logs.appendText(" decrypting ok \n");
+                        decryptPopUp.close();
+                        return null;
+                    }
+                };
+                bar.setVisible(true);
+                bar.progressProperty().bind(task.progressProperty());
+                grid.add(bar,1,3);
+                new Thread(task).start();
 
             }
         });

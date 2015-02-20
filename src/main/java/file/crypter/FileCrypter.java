@@ -1,6 +1,9 @@
 package file.crypter;
 
 import crypt.BlowfishEncrypter;
+import model.FileFX;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.io.File;
 import java.io.IOException;
@@ -9,67 +12,91 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 
 /**
- * Created with IntelliJ IDEA.
  * User: Adrien
  * Date: 02/07/14
  * Time: 12:01
- * To change thi | ezrzerizjrzfjsdkfnxnvxF
  */
 public class FileCrypter {
     /**
-     *
      * @param f
      * @param writingDir
      * @param pass
      */
-    public static void writeData(File f, File writingDir , String pass){
-        if(f.isDirectory()) {
-            for(File childFile : f.listFiles()){
-                writeData(childFile,new File(writingDir.getAbsolutePath()+File.separator+f.getName()),pass);
+    private static final Logger LOGGER = LogManager.getLogger(FileCrypter.class);
+
+    public static void writeData(FileFX f, File writingDir, String pass) {
+        if (!writingDir.exists()) {
+            writingDir.mkdirs();
+        }
+        if (f.getFile().isDirectory()) {
+
+//            for(File childFile : f.listFiles()){
+//                writeData(childFile,new File(writingDir.getAbsolutePath()+File.separator+f.getName()),pass);
+//            }
+        } else {
+            Path path = f.getFile().toPath();
+            try {
+
+                BlowfishEncrypter blowfishEncrypter = new BlowfishEncrypter(pass);
+
+                byte[] data = Files.readAllBytes(path);
+                byte[] encrypted = blowfishEncrypter.encrypt(data);
+                File dir = new File(writingDir.getAbsolutePath() + f.getParentPath() + File.separator);
+                if (!dir.exists()) {
+                    dir.mkdirs();
+                }
+                File newFile = new File(writingDir.getAbsolutePath() + File.separator + f.getParentPath() + File.separator + f.getFileName());
+                if (newFile.exists()) {
+
+                }
+                LOGGER.info("creating " + newFile.getAbsolutePath());
+                newFile.createNewFile();
+                Files.write(Paths.get(newFile.getAbsolutePath()), encrypted);
+
+            } catch (IOException e) {
+                LOGGER.error("Error while writing data", e);
             }
         }
-        Path path = f.toPath();
-        try {
 
-            BlowfishEncrypter blowfishEncrypter = new BlowfishEncrypter(pass);
-
-            byte[] data = Files.readAllBytes(path);
-            byte[] encrypted = blowfishEncrypter.encrypt(data);
-            File newFile = new File(writingDir.getAbsoluteFile()+File.separator+f.getName());
-            Files.write(Paths.get(newFile.getAbsolutePath()),encrypted);
-
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
     }
 
     /**
-     *
      * @param f
      * @param writingDir
      * @param pass
      */
-    public static void writeDataUncrypt(File f, File writingDir , String pass){
-        if(f.isDirectory()) {
-         for(File childFile : f.listFiles()){
-             writeDataUncrypt(childFile,new File(writingDir.getAbsolutePath()+File.separator+f.getName()),pass);
-         }
+    public static void writeDataUncrypt(FileFX f, File writingDir, String pass) {
+        if (!writingDir.exists()) {
+            writingDir.mkdirs();
         }
-        Path path = f.toPath();
-        try {
+        if (f.getFile().isDirectory()) {
 
-            BlowfishEncrypter blowfishEncrypter = new BlowfishEncrypter(pass);
 
-            byte[] data = Files.readAllBytes(path);
-            byte[] encrypted = blowfishEncrypter.decrypt(data);
-            File newFile = new File(writingDir.getAbsoluteFile()+File.separator+f.getName());
-            Files.write(Paths.get(newFile.getAbsolutePath()),encrypted);
+        } else {
+            Path path = f.getFile().toPath();
+            try {
 
-        } catch (IOException e) {
-            e.printStackTrace();
+                BlowfishEncrypter blowfishEncrypter = new BlowfishEncrypter(pass);
+                File dir = new File(writingDir.getAbsolutePath() + f.getParentPath() + File.separator);
+                if (!dir.exists()) {
+                    dir.mkdirs();
+                }
+                byte[] data = Files.readAllBytes(path);
+                byte[] decrypted = blowfishEncrypter.decrypt(data);
+                File newFile = new File(writingDir.getAbsolutePath() + File.separator + f.getParentPath() + File.separator + f.getFileName());
+                if (newFile.exists()) {
+
+                }
+                LOGGER.info("creating " + newFile.getAbsolutePath());
+                newFile.createNewFile();
+
+                Files.write(Paths.get(newFile.getAbsolutePath()), decrypted);
+
+            } catch (IOException e) {
+                LOGGER.error("Error while writing data", e);
+            }
         }
     }
-
 
 
 }
